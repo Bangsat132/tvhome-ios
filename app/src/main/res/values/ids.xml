@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <item name="field" type="id" />
+    <item name="top_bar" type="id" />
+    <item name="shelf_title" type="id" />
+    <item name="dock" type="id" />
+    <item name="grid" type="id" />
+    <item name="weather" type="id" />
+    <item name="clock" type="id" />
+    <item name="greeting" type="id" />
+    <item name="date" type="id" />
+    <item name="pills" type="id" />
+</resources>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Zero-padded arrays only: a "48dp" string in a dimens file is a build error, not a style. -->
+    <dimen name="screen_edge">48dp</dimen>
+    <dimen name="dock_bottom">32dp</dimen>
+    <dimen name="dock_gap">20dp</dimen>
+    <dimen name="top_bar_height">96dp</dimen>
+    <dimen name="tile_height">120dp</dimen>
+    <dimen name="dock_tile_height">104dp</dimen>
+</resources>

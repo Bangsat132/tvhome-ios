@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launcher's own banner: the design's field, the greeting line, and no logo, since this is a home
+     screen rather than a branded app. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path
+        android:pathData="M0,0h320v180h-320z"
+        android:fillColor="#0B0B0F" />
+    <path
+        android:pathData="M34,132h84v10h-84z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.9" />
+    <path
+        android:pathData="M34,104h132v6h-132z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.5" />
+    <path
+        android:pathData="M34,84h58v6h-58z"
+        android:fillColor="#4FC3F7"
+        android:fillAlpha="0.9" />
+    <path
+        android:pathData="M234,150h52v14h-52z"
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.12"
+        android:strokeColor="#38FFFFFF"
+        android:strokeWidth="1" />
+</vector>

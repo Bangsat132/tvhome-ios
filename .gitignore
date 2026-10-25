@@ -1,0 +1,12 @@
+# Gradle and the Android build output.
+.gradle/
+build/
+app/build/
+local.properties
+*.iml
+.idea/
+# Never commit a key: this repo installs over ADB and a leaked key is a shell on the TV.
+adbkey
+adbkey.pub
+*.keystore
+*.jks
