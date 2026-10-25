@@ -59,8 +59,25 @@ public final class Tokens {
     /** The focused tile grows 6 %; at 6 columns a larger lift collides with its neighbour. */
     public static final float FOCUS_SCALE = 1.06f;
 
-    /** dp to px at the density this TV reports. */
+    /**
+     * dp to px at the density this TV reports, scaled for the panel's height.
+     *
+     * <p>Every length above is written for a 1080p panel: DESIGN.md was drawn at that size because it is what
+     * the reference launcher and most sets here use. This launcher's first TV is 1280x720 (POLYTRON 2K, HKC
+     * nagai, 213 dpi), where the unscaled dock and grid fell off the bottom of the screen. Rather than a second
+     * set of numbers to keep in step, one factor scales all of them: 720/1080 = 0.667 on a 720p set, 1.0 on a
+     * 1080p one, and it is capped at 1 on a larger panel so a 4K set does not grow a 300 dp clock.
+     */
     public static float dp(android.content.Context ctx, float value) {
-        return value * ctx.getResources().getDisplayMetrics().density;
+        return value * ctx.getResources().getDisplayMetrics().density * scaleFactor(ctx);
+    }
+
+    /** The panel factor: 1.0 at 1080p and above, 0.667 at 720p, floored so nothing gets unreadable. */
+    public static float scaleFactor(android.content.Context ctx) {
+        int heightPx = ctx.getResources().getDisplayMetrics().heightPixels;
+        int widthPx = ctx.getResources().getDisplayMetrics().widthPixels;
+        int shortSide = Math.min(heightPx, widthPx);
+        float factor = shortSide / 1080f;
+        return Math.max(0.62f, Math.min(1f, factor));
     }
 }

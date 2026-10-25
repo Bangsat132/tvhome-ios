@@ -75,6 +75,9 @@ public final class HomeActivity extends Activity {
 
     private void build() {
         FrameLayout root = findViewById(R.id.root);
+        // The token sizes in DESIGN.md are written for a 1080p panel read from 2-3 m. This TV is 1280x720 at
+        // 213 dpi, so every length scales with a single factor: hard-coding 1080p sizes put the dock and the
+        // grid off the bottom of a 720p screen. One knob, applied once here, keeps the ratios intact.
         float density = getResources().getDisplayMetrics().density;
         int edge = px(Tokens.SCREEN_EDGE);
 
@@ -110,7 +113,6 @@ public final class HomeActivity extends Activity {
         date = text("", Tokens.LABEL, Tokens.TEXT_TERTIARY, Typefaces.medium(this), true);
         date.setId(R.id.date);
         left.addView(date);
-
         pillRow = new LinearLayout(this);
         pillRow.setId(R.id.pills);
         pillRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -236,7 +238,9 @@ public final class HomeActivity extends Activity {
             row.setOrientation(LinearLayout.HORIZONTAL);
             gridRows.addView(row, new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, tileH));
-            if (r == 0) row.addView(wrap(weatherCard, tileW, tileH), cardLp);
+            // The card is already inside cardHolder; adding the card itself here is what threw
+            // "The specified child already has a parent" on the TV.
+            if (r == 0) row.addView(cardHolder, cardLp);
             for (int c = 0; c < config.columns; c++) {
                 int index = r * config.columns + c - (r == 0 ? 1 : 0);
                 if (index < 0 || index >= gridApps.size()) continue;
@@ -254,12 +258,6 @@ public final class HomeActivity extends Activity {
         } else {
             weatherCard.requestFocus();
         }
-    }
-
-    private View wrap(View view, int w, int h) {
-        FrameLayout holder = new FrameLayout(this);
-        holder.addView(view, new FrameLayout.LayoutParams(w, h));
-        return holder;
     }
 
     private LinearLayout.LayoutParams tileParams() {

@@ -40,10 +40,13 @@ public final class Config {
 
     public static Config load(Context context) {
         Config config = new Config();
+        // The dock defaults to the apps a TV in this family actually carries: Netflix, the sideloaded
+        // TizenTube, and the set's own Live TV. Prime Video and Hotstar are not installed on the POLYTRON 2K,
+        // and a dock slot for an app that is not there is a hole (fill_dock fills it, so the order still reads).
         config.dockApps.add("com.netflix.ninja");
-        config.dockApps.add("com.amazon.amazonvideo.livingroom");
-        config.dockApps.add("com.google.android.youtube.tv");
-        config.dockApps.add("in.startv.hotstar");
+        config.dockApps.add("io.gh.reisxd.tizentube.cobalt");
+        config.dockApps.add("com.mediatek.wwtv.tvcenter");
+        config.dockApps.add("com.android.vending");
 
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         config.city = prefs.getString("city", "");
