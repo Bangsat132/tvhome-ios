@@ -153,15 +153,19 @@ public final class HomeActivity extends Activity {
         FrameLayout dockBand = new FrameLayout(this);
         dockBand.setBackground(Drawables.glass(Tokens.GLASS_DOCK, px(Tokens.RADIUS_LG), px(1), Tokens.GLASS_RIM));
         FrameLayout.LayoutParams bandLp = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, px(148));
-        bandLp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+                ViewGroup.LayoutParams.MATCH_PARENT, px(96));
+        bandLp.gravity = Gravity.BOTTOM;
         bandLp.bottomMargin = px(Tokens.DOCK_BOTTOM);
+        bandLp.leftMargin = edge;
+        bandLp.rightMargin = edge;
         root.addView(dockBand, bandLp);
 
         dockRow = new LinearLayout(this);
         dockRow.setId(R.id.dock);
         dockRow.setOrientation(LinearLayout.HORIZONTAL);
-        dockRow.setGravity(Gravity.CENTER_VERTICAL);
+        // Left-aligned like tvOS's shelf: the apps start at the band's edge and the band itself runs the
+        // full width, so an app arriving later grows the row instead of re-centring everything.
+        dockRow.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
         dockRow.setPadding(px(Tokens.DOCK_GAP), px(Tokens.DOCK_GAP), px(Tokens.DOCK_GAP), px(Tokens.DOCK_GAP));
         dockBand.addView(dockRow, new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -226,6 +230,12 @@ public final class HomeActivity extends Activity {
         weatherCard.setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { onWeatherCardActivated(); }
         });
+        weatherCard.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override public void onFocusChange(View v, boolean hasFocus) {
+                weatherCard.setFocusedState(hasFocus);
+                if (hasFocus) setShelf(config.city.isEmpty() ? "Weather" : config.city);
+            }
+        });
         FrameLayout cardHolder = new FrameLayout(this);
         cardHolder.addView(weatherCard, new FrameLayout.LayoutParams(tileW, tileH));
         LinearLayout.LayoutParams cardLp = new LinearLayout.LayoutParams(tileW, tileH);
@@ -247,11 +257,8 @@ public final class HomeActivity extends Activity {
                     // The card is already inside cardHolder; adding the card itself here is what threw
                     // "The specified child already has a parent" on the TV.
                     row.addView(cardHolder, cardLp);
-                } else {
-                    int index = slot - 1;
-                    if (index < gridApps.size()) {
-                        row.addView(makeTile(gridApps.get(index), tileW, tileH), tileParams());
-                    }
+                } else if (slot - 1 < gridApps.size()) {
+                    row.addView(makeTile(gridApps.get(slot - 1), tileW, tileH), tileParams());
                 }
                 slot++;
             }
@@ -262,11 +269,9 @@ public final class HomeActivity extends Activity {
         }
 
         buildPills();
-        if (!tiles.isEmpty()) {
-            tiles.get(0).requestFocus();
-        } else {
-            weatherCard.requestFocus();
-        }
+        // Home starts on the card: it is the first thing on screen and the one control that opens a picker,
+        // so a fresh install leads somewhere instead of landing on an app the person did not choose.
+        weatherCard.requestFocus();
     }
 
     private LinearLayout.LayoutParams tileParams() {

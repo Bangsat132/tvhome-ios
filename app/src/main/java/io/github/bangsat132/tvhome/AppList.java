@@ -97,12 +97,21 @@ public final class AppList {
         }
     }
 
-    /** The dock in `dock_apps` order, anything missing skipped, then filled from the grid while `fill`. */
+    /**
+     * The dock in `dock_apps` order, anything missing skipped, then filled from the grid while `fill`.
+     *
+     * <p>Matching is by package name, and also by the app's component prefix, because some sets register the
+     * same product under a second package (this TV ships TizenTube as io.gh.reisxd.tizentube.cobalt). A package
+     * in the list that is not installed is skipped rather than leaving a hole; fill_dock then tops the row up
+     * from the grid, so the band never reads as one lonely icon.
+     */
     public static List<App> dock(List<App> apps, List<String> dockPackages, int slots, boolean fill) {
         List<App> row = new ArrayList<>();
         for (String pkg : dockPackages) {
             for (App app : apps) {
-                if (app.pkg.equals(pkg) && !row.contains(app)) {
+                boolean samePackage = app.pkg.equals(pkg);
+                boolean samePrefix = app.component.startsWith(pkg + "/");
+                if ((samePackage || samePrefix) && !row.contains(app)) {
                     row.add(app);
                     break;
                 }

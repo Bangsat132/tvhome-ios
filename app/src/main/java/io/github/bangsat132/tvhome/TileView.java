@@ -60,7 +60,9 @@ final class TileView extends FrameLayout {
         name.setTypeface(Typefaces.medium(context));
         name.setGravity(Gravity.CENTER);
         name.setSingleLine(true);
-        name.setAlpha(0f);
+        // DESIGN.md, "Components / app-tile": the name is always there, dimmed while the tile is not focused.
+        // Showing it only on focus left most of the grid unreadable on the first build.
+        name.setAlpha(0.62f);
         name.setShadowLayer(Tokens.dp(context, 6), 0, Tokens.dp(context, 1), 0xCC000000);
         FrameLayout.LayoutParams nameLp = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -85,21 +87,26 @@ final class TileView extends FrameLayout {
         Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
         Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
-        // Pillow-soft corner radius on the artwork itself: rounded, like the tvOS icon grid.
+        // Pillow-soft corners on the artwork itself, like the tvOS icon grid. The mask is punched with
+        // DST_IN after the icon is drawn: drawing a rounded rect first did nothing at all, because an empty
+        // Paint has no colour to fill with.
         float r = size * 0.20f;
-        canvas.drawRoundRect(new RectF(0, 0, size, size), r, r, paint);
         float scale = Math.min(size / (float) w, size / (float) h);
         int dw = Math.round(w * scale);
         int dh = Math.round(h * scale);
         source.setBounds((size - dw) / 2, (size - dh) / 2, (size + dw) / 2, (size + dh) / 2);
         source.draw(canvas);
+        Paint mask = new Paint(Paint.ANTI_ALIAS_FLAG);
+        mask.setXfermode(new android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN));
+        mask.setColor(Color.BLACK);
+        canvas.drawRoundRect(new RectF(0, 0, size, size), r, r, mask);
         return new BitmapDrawable(null, bitmap);
     }
 
     void setFocusedState(boolean hasFocus, boolean reducedMotion) {
         focused = hasFocus;
         ring.setVisibility(hasFocus ? VISIBLE : INVISIBLE);
-        name.setAlpha(hasFocus ? 1f : 0f);
+        name.setAlpha(hasFocus ? 1f : 0.62f);
         float scale = (!hasFocus || reducedMotion) ? 1f : Tokens.FOCUS_SCALE;
         animate().cancel();
         animate().scaleX(scale).scaleY(scale)

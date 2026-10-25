@@ -128,7 +128,17 @@ grid RecyclerView alone — the top bar and dock never scroll, so the clock neve
 Tile width is derived from `columns`, never hard-coded; the widget is exactly one tile wide so it lines up
 with the grid columns in every theme.
 
+**Order.** The weather card occupies slot 0 of the grid and the app tiles fill the slots after it in reading
+order. An off-by-one here is invisible in code review and hides the apps a person actually opens, so the
+slot index is written once and tested.
+
 Safe area: a 5 % margin on all four sides because televisions overscan. Nothing important sits inside it.
+
+**Scaling to the panel.** Every length above is authored for a 1080p panel. One factor scales them all:
+`min(width, height) / 1080`, floored at 0.62 and capped at 1.0. A 720p set (the POLYTRON 2K this was built on
+is 1280x720 at 213 dpi) therefore draws at 0.667, and a 4K set does not grow a 300 dp clock. Keeping one
+factor rather than a second table of numbers is what lets the dock, the shelf and the grid stay in proportion
+across both panel classes.
 
 ## Elevation & Depth
 
@@ -150,14 +160,19 @@ gap, so the gap reads the same on all four sides.
 
 ## Components
 
-- **app-tile** — banner or icon on a glass slab, name only under the focused tile. States: default,
-  focused (`scrim` lightened one step + `ring` + scale 1.06), pressed (scale 1.0, no delay), disabled
-  (tile at 40 % and not focusable; a disabled app is skipped by the D-pad).
+- **app-tile** — the app's icon on a glass slab, with its name always present under the tile: 62 % opacity
+  while unfocused, full `text-primary` while focused. The name is not revealed on focus only; a grid of
+  unlabelled icons cannot be read from a sofa. Icons, not banners: a 320x180 banner squeezed into a square
+  tile loses its artwork and stretches its background, which is what the first build shipped. States:
+  default, focused (`surface` lightened one step + `ring` + scale 1.06), pressed (scale 1.0, no delay),
+  disabled (tile at 40 % and not focusable; a disabled app is skipped by the D-pad).
 - **widget-card** — one-tile weather card. States: loading (sky gradient, no numbers, a 2dp progress line),
   loaded (temp, city, condition, three day highs), error (`accent-danger` dot, "Weather unavailable", the
   last good reading kept for one hour), focused (ring + glow in `accent-sky`). Its tap opens nothing: OK
   on it refreshes.
-- **dock-band** — glass strip behind the dock apps; state change only on focus (rim brightens one step).
+- **dock-band** — glass strip behind the dock apps, running the full safe width with the apps aligned to its
+  leading edge, so the band never shrinks around a short dock into a single island. State change only on
+  focus (rim brightens one step).
 - **top-pill** — Inputs, Wi-Fi, Settings. Focused: fill to 18 %, text to full white.
 - **shelf-title** — the focused item's name; cross-fades over 180 ms when focus moves, never slides.
 - **empty-state** — when no app is installed beyond the widget: the widget alone, centred, with one line
@@ -202,6 +217,10 @@ Accepted debt:
 - No screen-reader traversal of the grid beyond the focused tile: TalkBack on this launcher reads the
   focused tile and its position only. Reason: the grid is a custom D-pad surface; a full accessibility
   tree costs more RAM than a 1 GB set should spend.
+- The card's own type is sized as a fraction of the card (0.30 of its height for the temperature down to
+  0.078 for a label) rather than from the `typography:` tokens. Reason: the card is one column wide and its
+  height follows the grid, so a token size that fits a 1080p card overflows a 720p one. The token scale still
+  governs every TextView on the screen.
 - Focus scale is 6 % rather than tvOS's larger lift. Reason: at 6 columns on a 720p panel a bigger scale
   collides with its neighbour.
 - The weather card is one tile wide, so it shows the current temperature and condition only, not the

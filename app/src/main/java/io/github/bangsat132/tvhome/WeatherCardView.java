@@ -3,22 +3,22 @@ package io.github.bangsat132.tvhome;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.LinearGradient;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.Shader;
-import android.graphics.LinearGradient;
 import android.view.View;
 
 /**
  * The weather card: the first tile of the row and the only live one (DESIGN.md, "Signature Element").
  *
- * <p>It is one tile wide so it lines up with the grid's columns in every theme, and it shows only what fits
- * at that width: the temperature, the city, the condition, and three small day marks. Tap or OK refreshes;
- * a failed fetch keeps the last good reading and marks it.
+ * <p>Every size here is a fraction of the card's own box, not a dp constant. The card is one grid column
+ * wide, so on this 720p set it is about 220 x 110 px; a layout written in dp puts the same text in a box a
+ * third smaller and the numbers fall past the bottom, which is exactly why the first build drew an empty slab
+ * with its own label invisible.
  *
- * <p>States come from DESIGN.md, "Components / widget-card": loading (sky gradient, no numbers, a 2dp
- * progress line), loaded (numbers), error (a danger dot and the last reading), focused (ring plus a glow in
- * the sky accent).
+ * <p>States (DESIGN.md, "Components / widget-card"): loaded, loading, no-city, focused, and stale (a failed
+ * fetch keeps the last good reading and marks it).
  */
 public final class WeatherCardView extends View {
 
@@ -26,21 +26,25 @@ public final class WeatherCardView extends View {
     private final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF card = new RectF();
     private final RectF sky = new RectF();
+    private final RectF ringRect = new RectF();
 
     private Weather.Now now;
     private boolean loading;
     private boolean focused;
     private boolean fahrenheit;
-    private float daylight = 0.5f;
-    /** 0..1, animated while loading so the progress line is visibly alive. */
+    private float daylight = 0.55f;
     private float progress;
 
     public WeatherCardView(Context context) {
         super(context);
-        setFocusable(false);
+        setFocusable(true);
+        setFocusableInTouchMode(false);
         setClickable(true);
-        text.setTypeface(Typefaces.light(context));
+        text.setTypeface(Typefaces.regular(context));
+        text.setSubpixelText(true);
     }
+
+    // --- state ---------------------------------------------------------------
 
     public void setFahrenheit(boolean value) {
         fahrenheit = value;
@@ -57,34 +61,34 @@ public final class WeatherCardView extends View {
         return progress;
     }
 
+    public void setProgress(float value) {
+        progress = Math.max(0f, Math.min(1f, value));
+        invalidate();
+    }
+
     public void setLoading(boolean value) {
         loading = value;
         invalidate();
     }
 
-    public void setProgress(float value) {
-        progress = Math.max(0f, Math.min(1f, value));
-        invalidate();
+    public Weather.Now getNow() {
+        return now;
     }
 
     public void setNow(Weather.Now value) {
         now = value;
         loading = false;
         if (value != null) {
-            // Clear conditions show a brighter field than an overcast one, which is the only cue the card
-            // needs to feel alive without a picture.
+            // Clear weather lifts the field, overcast settles it: the one cue the card needs to feel alive
+            // without shipping a picture.
             daylight = value.isDay == 1 ? Math.min(1f, 0.45f + clarity(value.wmoCode)) : 0.12f;
-            if (getParent() instanceof android.view.ViewGroup) {
-                android.view.ViewGroup parent = (android.view.ViewGroup) getParent();
-                android.view.View field = parent.findViewById(R.id.field);
-                if (field instanceof FieldView) ((FieldView) field).setDaylight(daylight);
-            }
+            View field = getRootView().findViewById(R.id.field);
+            if (field instanceof FieldView) ((FieldView) field).setDaylight(daylight);
+            double shown = fahrenheit ? value.temperature * 9.0 / 5.0 + 32.0 : value.temperature;
+            setContentDescription(String.format(java.util.Locale.getDefault(), "%s, %d degrees, %s",
+                    value.city, Math.round(shown), value.condition));
         }
         invalidate();
-    }
-
-    public Weather.Now getNow() {
-        return now;
     }
 
     private static float clarity(int code) {
@@ -95,116 +99,132 @@ public final class WeatherCardView extends View {
         return 0.20f;
     }
 
+    // --- drawing -------------------------------------------------------------
+
     @Override
     protected void onDraw(Canvas canvas) {
-        int w = getWidth();
-        int h = getHeight();
-        if (w == 0 || h == 0) return;
-        float pad = Tokens.dp(getContext(), 16);
-        float radius = Tokens.dp(getContext(), Tokens.RADIUS_TILE);
+        float w = getWidth();
+        float h = getHeight();
+        if (w <= 0 || h <= 0) return;
+
+        float pad = w * 0.062f;
+        float radius = Math.min(w, h) * 0.13f;
+        float inner = w - pad * 2;
         card.set(0, 0, w, h);
 
-        // 1. The card slab: raised surface, one step lighter than the field, so it reads as a card without a
-        //    shadow (DESIGN.md, "Elevation & Depth": no shadows on this surface).
+        // 1. The slab: one step above the field, no shadow (DESIGN.md, "Elevation & Depth").
         paint.setStyle(Paint.Style.FILL);
-        paint.setColor(focused ? lighten(Tokens.SURFACE_RAISED, 0.06f) : Tokens.SURFACE_RAISED);
+        paint.setColor(focused ? lighten(Tokens.SURFACE_RAISED, 0.10f) : Tokens.SURFACE_RAISED);
         canvas.drawRoundRect(card, radius, radius, paint);
 
-        // 2. The sky: a vertical grade from the sun position. Dawn amber, day blue, dusk rose, night indigo.
-        sky.set(pad, pad, w - pad, h * 0.52f);
-        float skyRadius = Math.max(Tokens.dp(getContext(), Tokens.RADIUS_SM), radius - pad * 0.4f);
+        // 2. The sky band, graded from the sun position: amber at dawn, blue at noon, indigo at night.
+        sky.set(pad, pad, w - pad, h * 0.50f);
+        float skyRadius = Math.min(sky.width(), sky.height()) * 0.22f;
         paint.setShader(new LinearGradient(0, sky.top, 0, sky.bottom,
-                new int[]{skyTop(), skyBottom()}, new float[]{0f, 1f}, Shader.TileMode.CLAMP));
+                new int[]{skyTop(), skyBottom()}, null, Shader.TileMode.CLAMP));
         canvas.drawRoundRect(sky, skyRadius, skyRadius, paint);
         paint.setShader(null);
 
-        // 3. A thin horizon at the sky's base: the card's one signature detail.
-        paint.setColor(0x33FFFFFF);
-        paint.setStrokeWidth(Tokens.dp(getContext(), 1));
-        canvas.drawLine(sky.left + pad, sky.bottom - Tokens.dp(getContext(), 10),
-                sky.right - pad, sky.bottom - Tokens.dp(getContext(), 10), paint);
+        // 3. The horizon: the card's one signature detail, a hairline at the sky's base.
+        paint.setColor(0x40FFFFFF);
+        paint.setStrokeWidth(Math.max(1f, h * 0.008f));
+        canvas.drawLine(sky.left + pad * 0.4f, sky.bottom - h * 0.045f,
+                sky.right - pad * 0.4f, sky.bottom - h * 0.045f, paint);
 
-        float x = pad;
-        float y = pad;
+        float left = pad;
 
-        // 4. The temperature, in the light weight so it reads as air rather than as a headline.
         if (now != null) {
-            String temp = format(now.temperature) + "°";
+            // 4a. The temperature, thin, at 30 % of the card's height, sitting on the horizon.
+            String degrees = format(now.temperature);
             text.setColor(Tokens.TEXT_PRIMARY);
-            text.setTextSize(Tokens.dp(getContext(), 44));
             text.setTypeface(Typefaces.thin(getContext()));
-            canvas.drawText(temp, x, y + Tokens.dp(getContext(), 46), text);
+            text.setTextSize(h * 0.30f);
+            float baseline = sky.bottom - h * 0.055f;
+            canvas.drawText(degrees, left, baseline, text);
+            float used = text.measureText(degrees);
 
-            text.setTypeface(Typefaces.regular(getContext()));
-            text.setTextSize(Tokens.dp(getContext(), Tokens.META));
-            text.setColor(Tokens.TEXT_SECONDARY);
-            canvas.drawText(unitLetter(), x + text.measureText(temp) + Tokens.dp(getContext(), 8),
-                    y + Tokens.dp(getContext(), 44), text);
-
-            float lineY = y + Tokens.dp(getContext(), 72);
-            text.setColor(Tokens.TEXT_PRIMARY);
-            text.setTextSize(Tokens.dp(getContext(), Tokens.BODY));
-            canvas.drawText(Weather.glyphFor(now.wmoCode) + "  " + now.condition, x, lineY, text);
-
-            text.setColor(Tokens.TEXT_SECONDARY);
-            text.setTextSize(Tokens.dp(getContext(), Tokens.META));
-            canvas.drawText(now.stale ? "Last reading" : "Now", x, lineY + Tokens.dp(getContext(), 18), text);
-        } else if (loading) {
-            text.setColor(Tokens.TEXT_SECONDARY);
-            text.setTextSize(Tokens.dp(getContext(), Tokens.BODY));
-            canvas.drawText("Weather…", x, y + Tokens.dp(getContext(), 46), text);
-        } else {
-            text.setColor(Tokens.TEXT_SECONDARY);
-            text.setTextSize(Tokens.dp(getContext(), Tokens.BODY));
-            canvas.drawText("Set a city", x, y + Tokens.dp(getContext(), 46), text);
-            text.setTextSize(Tokens.dp(getContext(), Tokens.META));
-            text.setColor(Tokens.TEXT_TERTIARY);
-            canvas.drawText("Press OK", x, y + Tokens.dp(getContext(), 68), text);
-        }
-
-        // 5. The city, bottom left; the three day marks, bottom right. The card is one tile wide, so the
-        //    full three-day strip lives in the weather app (DESIGN.md, accepted debt).
-        if (now != null && !now.city.isEmpty()) {
             text.setTypeface(Typefaces.medium(getContext()));
-            text.setTextSize(Tokens.dp(getContext(), Tokens.LABEL));
-            text.setColor(Tokens.TEXT_TERTIARY);
-            canvas.drawText(now.city.toUpperCase(java.util.Locale.ROOT), x, h - Tokens.dp(getContext(), 16), text);
+            text.setTextSize(h * 0.085f);
+            text.setColor(Tokens.TEXT_SECONDARY);
+            canvas.drawText("°" + unitLetter(), left + used + w * 0.008f, baseline, text);
 
-            float dy = h - Tokens.dp(getContext(), 16);
+            // 4b. The condition under the sky, with its glyph as a text cue (no bitmap bundled).
+            text.setTypeface(Typefaces.regular(getContext()));
+            text.setTextSize(h * 0.105f);
+            text.setColor(Tokens.TEXT_PRIMARY);
+            String condition = Weather.glyphFor(now.wmoCode) + "  " + now.condition;
+            canvas.drawText(fit(condition, text, inner), left, h * 0.72f, text);
+
+            // 4c. The city at the base, small caps and dimmed; "STALE" instead when the last fetch failed.
+            text.setTypeface(Typefaces.medium(getContext()));
+            text.setTextSize(h * 0.078f);
+            text.setColor(now.stale ? Tokens.DANGER : Tokens.TEXT_TERTIARY);
+            String foot = now.stale ? "STALE" : now.city.toUpperCase(java.util.Locale.getDefault());
+            canvas.drawText(fit(foot, text, inner * 0.55f), left, h * 0.90f, text);
+
+            // 4d. The day highs, right-aligned at the base, only as many as fit.
             float right = w - pad;
-            text.setTextSize(Tokens.dp(getContext(), Tokens.META));
-            for (int i = 2; i >= 0; i--) {
-                String mark = Weather.glyphFor(now.dayCodes[i]) + " " + format(now.dayHighs[i]) + "°";
+            float dy = h * 0.90f;
+            for (int i = 0; i < 3; i++) {
+                if (Double.isNaN(now.dayHighs[i])) continue;
+                String mark = format(now.dayHighs[i]) + "°";
                 float width = text.measureText(mark);
+                if (right - width < left + inner * 0.42f) break;
                 text.setColor(i == 0 ? Tokens.TEXT_SECONDARY : Tokens.TEXT_TERTIARY);
                 canvas.drawText(mark, right - width, dy, text);
-                right -= width + Tokens.dp(getContext(), 10);
-                if (right < x + Tokens.dp(getContext(), 90)) break;
+                right -= width + w * 0.05f;
             }
+        } else if (loading) {
+            // 5a. Loading: a word, never a spinner (a spinner on a TV reads as a fault).
+            text.setTypeface(Typefaces.regular(getContext()));
+            text.setTextSize(h * 0.135f);
+            text.setColor(Tokens.TEXT_SECONDARY);
+            canvas.drawText("Weather", left, h * 0.44f, text);
+        } else {
+            // 5b. No city yet: the invitation. The first build was in this state and drew nothing, because
+            // its layout pushed the text past the card's own box.
+            text.setTypeface(Typefaces.regular(getContext()));
+            text.setTextSize(h * 0.135f);
+            text.setColor(Tokens.TEXT_PRIMARY);
+            canvas.drawText("Weather", left, h * 0.42f, text);
+            text.setTypeface(Typefaces.medium(getContext()));
+            text.setTextSize(h * 0.082f);
+            text.setColor(Tokens.SKY);
+            canvas.drawText(fit("PRESS OK TO PICK A CITY", text, inner), left, h * 0.63f, text);
         }
 
-        // 6. Loading: a 2dp progress line at the card's base, never a spinner (a spinner on a TV reads as
-        //    "something is wrong").
+        // 6. Loading line: a share of the card's height, along its base.
         if (loading) {
-            float lineY = h - Tokens.dp(getContext(), 8);
-            paint.setColor(0x22FFFFFF);
-            canvas.drawRect(pad, lineY, w - pad, lineY + Tokens.dp(getContext(), 2), paint);
+            float lineH = Math.max(2f, h * 0.02f);
+            float lineY = h - pad * 0.6f;
+            paint.setColor(0x26FFFFFF);
+            canvas.drawRect(pad, lineY, w - pad, lineY + lineH, paint);
             float width = (w - pad * 2) * 0.35f;
             float start = pad + (w - pad * 2 - width) * progress;
             paint.setColor(Tokens.SKY);
-            canvas.drawRect(start, lineY, start + width, lineY + Tokens.dp(getContext(), 2), paint);
+            canvas.drawRect(start, lineY, start + width, lineY + lineH, paint);
         }
 
-        // 7. Focused: the ring and a glow in the sky accent. The ring is its own token so it stays visible on
-        //    this card's own blue (DESIGN.md, "Colors").
+        // 7. The focus ring, its own token so it reads on the card's own blue.
         if (focused) {
+            float stroke = Math.max(2f, h * 0.018f);
             paint.setStyle(Paint.Style.STROKE);
-            paint.setStrokeWidth(Tokens.dp(getContext(), 2));
+            paint.setStrokeWidth(stroke);
             paint.setColor(Tokens.RING);
-            float inset = Tokens.dp(getContext(), 1);
-            canvas.drawRoundRect(new RectF(inset, inset, w - inset, h - inset), radius, radius, paint);
+            ringRect.set(stroke / 2f, stroke / 2f, w - stroke / 2f, h - stroke / 2f);
+            canvas.drawRoundRect(ringRect, radius, radius, paint);
             paint.setStyle(Paint.Style.FILL);
         }
+    }
+
+    /** Ellipsises a line to a width, so a long city name never runs into the day marks. */
+    private static String fit(String value, Paint paint, float maxWidth) {
+        if (paint.measureText(value) <= maxWidth) return value;
+        String cut = value;
+        while (cut.length() > 1 && paint.measureText(cut + "…") > maxWidth) {
+            cut = cut.substring(0, cut.length() - 1);
+        }
+        return cut + "…";
     }
 
     private String format(double value) {
@@ -218,12 +238,11 @@ public final class WeatherCardView extends View {
     }
 
     private int skyTop() {
-        // Dawn and dusk lean warm, midday blue, night indigo. daylight is 0 at night and 1 at noon.
         int night = 0xFF1B1F3B;
         int day = 0xFF2F6FB5;
         int warm = 0xFFB4622F;
         if (daylight < 0.25f) return blendColor(night, warm, daylight / 0.25f);
-        if (daylight < 0.45f) return blendColor(warm, warm, 0f);
+        if (daylight < 0.45f) return warm;
         return blendColor(warm, day, (daylight - 0.45f) / 0.55f);
     }
 
