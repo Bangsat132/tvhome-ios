@@ -53,6 +53,10 @@ public final class WeatherCardView extends View {
         invalidate();
     }
 
+    public float getProgress() {
+        return progress;
+    }
+
     public void setLoading(boolean value) {
         loading = value;
         invalidate();

@@ -72,7 +72,7 @@ public final class CityActivity extends Activity {
         input.setHintTextColor(Tokens.TEXT_TERTIARY);
         input.setTextSize(TypedValue.COMPLEX_UNIT_SP, Tokens.TITLE_LG);
         input.setTypeface(Typefaces.regular(this));
-        input.setBackground(Drawables.glass(this, Tokens.GLASS_PILL, Math.round(Tokens.dp(this, Tokens.RADIUS_SM)),
+        input.setBackground(Drawables.glass(Tokens.GLASS_PILL, Math.round(Tokens.dp(this, Tokens.RADIUS_SM)),
                 Math.round(Tokens.dp(this, 1)), Tokens.GLASS_RIM));
         input.setPadding(Math.round(Tokens.dp(this, 20)), Math.round(Tokens.dp(this, 16)),
                 Math.round(Tokens.dp(this, 20)), Math.round(Tokens.dp(this, 16)));

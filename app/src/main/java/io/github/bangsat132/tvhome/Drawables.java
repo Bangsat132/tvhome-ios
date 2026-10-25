@@ -11,7 +11,7 @@ final class Drawables {
 
     private Drawables() {}
 
-    static GradientDrawable glass(Context context, int fillColor, int radiusPx, int rimPx, int rimColor) {
+    static GradientDrawable glass(int fillColor, int radiusPx, int rimPx, int rimColor) {
         GradientDrawable d = new GradientDrawable();
         d.setShape(GradientDrawable.RECTANGLE);
         d.setColor(fillColor);
