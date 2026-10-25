@@ -134,7 +134,7 @@ public final class WeatherCardView extends View {
             text.setTypeface(Typefaces.regular(getContext()));
             text.setTextSize(Tokens.dp(getContext(), Tokens.META));
             text.setColor(Tokens.TEXT_SECONDARY);
-            canvas.drawText(short(temp), x + text.measureText(temp) + Tokens.dp(getContext(), 8),
+            canvas.drawText(unitLetter(), x + text.measureText(temp) + Tokens.dp(getContext(), 8),
                     y + Tokens.dp(getContext(), 44), text);
 
             float lineY = y + Tokens.dp(getContext(), 72);
@@ -209,7 +209,7 @@ public final class WeatherCardView extends View {
         return String.valueOf(Math.round(shown));
     }
 
-    private String short(String ignored) {
+    private String unitLetter() {
         return fahrenheit ? "F" : "C";
     }
 
