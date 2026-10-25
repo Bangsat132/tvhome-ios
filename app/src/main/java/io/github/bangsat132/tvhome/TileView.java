@@ -40,7 +40,10 @@ final class TileView extends FrameLayout {
 
         art = new ImageView(context);
         art.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        Drawable artwork = app.banner != null ? app.banner : app.icon;
+        // Icons, not banners: a TV banner is 320x180 and squashing it into a square tile stretched a pure
+        // gradient across the whole tile, which is what the first build showed (an orange slab instead of
+        // TizenTube). tvOS tiles are icon squares too (DESIGN.md, "Components / app-tile").
+        Drawable artwork = app.icon != null ? app.icon : app.banner;
         if (artwork != null) {
             art.setImageDrawable(square(artwork));
         }

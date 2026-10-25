@@ -232,19 +232,28 @@ public final class HomeActivity extends Activity {
         cardLp.setMarginEnd(px(Tokens.DOCK_GAP));
 
         List<AppList.App> gridApps = rest;
+        // The card takes slot 0 and the apps fill the slots after it, in reading order. The old index
+        // (r * columns + c - 1 on row 0) skipped the first app of row 0 and then shifted every later row by
+        // one, so the apps a person actually uses never appeared.
+        int slot = 0;
         int rowCount = (int) Math.ceil((gridApps.size() + 1) / (float) config.columns);
         for (int r = 0; r < Math.max(1, rowCount); r++) {
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
             gridRows.addView(row, new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, tileH));
-            // The card is already inside cardHolder; adding the card itself here is what threw
-            // "The specified child already has a parent" on the TV.
-            if (r == 0) row.addView(cardHolder, cardLp);
             for (int c = 0; c < config.columns; c++) {
-                int index = r * config.columns + c - (r == 0 ? 1 : 0);
-                if (index < 0 || index >= gridApps.size()) continue;
-                row.addView(makeTile(gridApps.get(index), tileW, tileH), tileParams());
+                if (slot == 0) {
+                    // The card is already inside cardHolder; adding the card itself here is what threw
+                    // "The specified child already has a parent" on the TV.
+                    row.addView(cardHolder, cardLp);
+                } else {
+                    int index = slot - 1;
+                    if (index < gridApps.size()) {
+                        row.addView(makeTile(gridApps.get(index), tileW, tileH), tileParams());
+                    }
+                }
+                slot++;
             }
         }
 

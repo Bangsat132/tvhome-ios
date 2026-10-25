@@ -46,7 +46,7 @@ public final class Config {
         config.dockApps.add("com.netflix.ninja");
         config.dockApps.add("io.gh.reisxd.tizentube.cobalt");
         config.dockApps.add("com.mediatek.wwtv.tvcenter");
-        config.dockApps.add("com.android.vending");
+        config.dockApps.add("com.mediatek.wwtv.mediaplayer");
 
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         config.city = prefs.getString("city", "");
